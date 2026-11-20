@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { useFetch } from '../../hooks/useFetch'
 import { accesoService } from '../../services'
+import { MdExtension } from 'react-icons/md'
 import CrudPage from '../../components/ui/CrudPage'
 import { Input, Modal, Button, Badge, Spinner, Alert } from '../../components/ui'
 
@@ -57,7 +58,7 @@ function ModalModulosRol({ open, onClose, rolId, rolNombre }) {
   const visibles = modulos.data?.filter(m => m.ind_visible) || []
 
   return (
-    <Modal open={open} onClose={onClose} title={`🧩 Módulos — Rol: ${rolNombre}`} size="md">
+    <Modal open={open} onClose={onClose} title={`Módulos - Rol: ${rolNombre}`} size="md">
       {msg && <Alert type={msg.type==='ok'?'success':'error'} style={{marginBottom:12}}>{msg.text}</Alert>}
       {modulos.loading || asignados.loading ? <Spinner size="sm" /> : (
         <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
@@ -68,7 +69,7 @@ function ModalModulosRol({ open, onClose, rolId, rolNombre }) {
               borderRadius:8, border:`1.5px solid ${asignadosIds.has(m.id)?'var(--primary-border)':'var(--border)'}`,
             }}>
               <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                <span>{m.icono || '🔹'}</span>
+                <span>{m.icono || <MdExtension size={16}/>}</span>
                 <div>
                   <div style={{ fontWeight:600, fontSize:'.88rem' }}>{m.descripcion}</div>
                   <div style={{ fontSize:'.75rem', color:'var(--text-muted)' }}>{m.nombre_aplicacion}</div>
@@ -96,7 +97,7 @@ export default function GestionRoles() {
   const [modulosModal, setModulosModal] = useState(null)
 
   const extraActions = row => (
-    <Button size="sm" variant="secondary" icon="🧩"
+    <Button size="sm" variant="secondary" icon={<MdExtension size={14}/>} 
       onClick={() => setModulosModal({ id: row.id, nombre: row.descripcion })}>
       Módulos
     </Button>

@@ -8,6 +8,7 @@ import styles from './EvaluacionPublica.module.css'
 import logo from '../../assets/logo.png'
 import celebrar from '../../assets/papel-picado.png'
 import { FaExclamationCircle } from "react-icons/fa";
+import { MdClose } from 'react-icons/md';
 
 const MAX_POR_HABILIDAD = 15   // debe coincidir con MotorCAT.MAX_ITEMS
 
@@ -52,7 +53,7 @@ export default function EvaluacionPublica() {
   const [resultado,    setResultado]    = useState(null)
   const [loading,      setLoading]      = useState(false)
   const [error,        setError]        = useState(null)
-  const [theta,        setTheta]        = useState(null)
+  const [puntaje,        setpuntaje]        = useState(null)
   const tiempoRef = useRef(null)
 
   // Contador GLOBAL acumulativo — nunca retrocede
@@ -102,7 +103,7 @@ export default function EvaluacionPublica() {
         tiempo_seg:   tiempoSeg,
       })
       const d = res.data
-      if (d.theta != null) setTheta(d.theta)
+      if (d.puntaje != null) setpuntaje(d.puntaje)
       setSeleccionado(null)
       tiempoRef.current = Date.now()
       // Contador sube siempre — nunca retrocede aunque cambie habilidad
@@ -147,7 +148,7 @@ export default function EvaluacionPublica() {
     </div></div>
   )
   if (estado === 'completado') {
-    const niv = nivel(resultado?.theta_final)
+    const niv = nivel(resultado?.puntaje_final)
     return (
       <div className={styles.page}><div className={styles.card}>
         <img src={celebrar} style={{ fontSize:'3rem', marginBottom:16, width: 50, height:50 }}/>
@@ -158,11 +159,11 @@ export default function EvaluacionPublica() {
         {resultado && (
           <div style={{ background:'var(--primary-bg)', borderRadius:12, padding:20, textAlign:'center' }}>
             <div style={{ fontSize:'2.5rem', fontWeight:800, color:niv.color }}>
-              {resultado.theta_final != null ? Number(resultado.theta_final).toFixed(3) : '—'}
+              {resultado.puntaje_final != null ? Number(resultado.puntaje_final).toFixed(3) : '—'}
             </div>
             <div style={{ fontSize:'1.1rem', fontWeight:700, color:niv.color, marginTop:4 }}>{niv.label}</div>
             <div style={{ fontSize:'.78rem', color:'var(--text-muted)', marginTop:4 }}>
-              θ estimado · SE: {resultado.error_estandar != null ? Number(resultado.error_estandar).toFixed(3) : '—'}
+              Puntaje estimado · SE: {resultado.error_estandar != null ? Number(resultado.error_estandar).toFixed(3) : '—'}
             </div>
           </div>
         )}
@@ -181,9 +182,9 @@ export default function EvaluacionPublica() {
 
       <ProgressBar respondidas={respondidas} total={totalEsperado} />
 
-      {theta != null && (
+      {puntaje != null && (
         <div style={{ fontSize:'.72rem', color:'var(--text-muted)', textAlign:'right', marginBottom:10 }}>
-          θ: {Number(theta).toFixed(3)}
+          Puntaje: {Number(puntaje).toFixed(3)}
         </div>
       )}
 
@@ -193,7 +194,7 @@ export default function EvaluacionPublica() {
           display:'flex', justifyContent:'space-between', alignItems:'center' }}>
           {error}
           <button onClick={() => setError(null)} style={{ background:'none', border:'none',
-            cursor:'pointer', color:'inherit', fontWeight:700 }}>✕</button>
+            cursor:'pointer', color:'inherit', fontWeight:700 }}><MdClose size={16}/></button>
         </div>
       )}
 

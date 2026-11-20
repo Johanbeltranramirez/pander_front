@@ -17,13 +17,28 @@ import {
 import {
   MdAdd, MdBarChart, MdTableChart, MdFilterList,
   MdDownload, MdGavel, MdCheckCircle, MdCancel,
-  MdRefresh, MdInfo, MdTrendingUp, MdOutlineCreateNewFolder
+  MdRefresh, MdInfo, MdTrendingUp, MdOutlineCreateNewFolder,
+  MdSend, MdDoneAll, MdArrowForward, MdArrowBack, MdEmail
 } from 'react-icons/md'
 
 // ── Utilidades ────────────────────────────────────────────────
 const C_ESTADO   = { Recibida:'info','En Evaluación':'warning',Seleccionado:'success',Descartado:'danger',Finalizado:'primary' }
 const C_DECISION = { SELECCIONADO:'success',DESCARTADO:'danger','EN PROCESO':'warning',FINALIZADO:'primary' }
 const PALETTE    = ['#2563eb','#15803d','#f59e0b','#ef4444','#7c3aed','#0891b2','#ca8a04']
+const NIVELES = [
+  { label:'Sobresaliente', min: 1.5 },
+  { label:'Alto',          min: 0.5 },
+  { label:'Medio',         min:-0.5 },
+  { label:'Bajo',          min:-1.5 },
+  { label:'Muy Bajo',      min:-4.0 },
+]
+function getNivelPuntaje(puntaje) {
+  if (puntaje == null) return null
+  for (let i = 0; i < NIVELES.length; i++) {
+    if (puntaje >= NIVELES[i].min) return NIVELES[i].label
+  }
+  return NIVELES[NIVELES.length - 1].label
+}
 
 function nBadge(v, map) { return <Badge variant={map[v]||'info'}>{v||'—'}</Badge> }
 
@@ -101,14 +116,14 @@ const COLS_REP = [
   {key:'vacante',label:'Vacante',render:v=><span title={v}>{v?.slice(0,35)}{v?.length>35?'…':''}</span>},
   {key:'estado_postulacion',label:'Estado',width:130,render:v=>nBadge(v,C_ESTADO)},
   {key:'decision',label:'Decisión',width:120,render:v=>v?nBadge(v,C_DECISION):<span style={{color:'var(--text-muted)'}}>—</span>},
-  {key:'theta_final',label:'θ Final',width:90,render:v=>v!=null?<strong style={{color:'var(--primary)'}}>{Number(v).toFixed(3)}</strong>:'—'},
+  {key:'puntaje_final',label:'Puntaje Final',width:90,render:v=>v!=null?<strong style={{color:'var(--primary)'}}>{Number(v).toFixed(3)}</strong>:'—'},
   {key:'estado_intento',label:'Evaluación',width:110,render:v=>v?nBadge(v,{Completado:'success','En Progreso':'warning'}):'—'},
   {key:'duracion_minutos',label:'Duración',width:80,render:v=>v!=null?`${v} min`:'—'},
 ]
 const COLS_EXP = [
   {key:'candidato_nombre_completo',label:'Candidato'},{key:'vacante',label:'Vacante'},
   {key:'unidad',label:'Unidad'},{key:'estado_postulacion',label:'Estado'},{key:'decision',label:'Decisión'},
-  {key:'theta_final',label:'θ Final'},{key:'error_estandar_final',label:'SE(θ)'},
+  {key:'puntaje_final',label:'Puntaje Final'},{key:'error_estandar_final',label:'SE(Puntaje)'},
   {key:'estado_intento',label:'Estado Evaluación'},{key:'duracion_minutos',label:'Duración (min)'},
   {key:'candidato_email',label:'Email'},{key:'candidato_telefono',label:'Teléfono'},
 ]
@@ -131,9 +146,9 @@ const GRAFICAS_DEF = [
     campo:'decision', tipo:'pie',
   },
   {
-    id:'theta_vacante', label:'θ Promedio × Vacante',
-    desc:'Nivel de competencia estimado (θ) promedio de los candidatos evaluados por vacante.',
-    campo:'vacante', metrica:'theta_final', tipo:'bar_avg',
+    id:'puntaje_vacante', label:'Puntaje Promedio × Vacante',
+    desc:'Nivel de competencia estimado (Puntaje) promedio de los candidatos evaluados por vacante.',
+    campo:'vacante', metrica:'puntaje_final', tipo:'bar_avg',
   },
   {
     id:'unidad', label:'Candidatos × Unidad Org.',
@@ -362,7 +377,7 @@ function ModalPostular({open,onClose,compania,onSaved}) {
       </div>
       <div style={{display:'flex',gap:10,justifyContent:'flex-end',marginTop:20}}>
         <Button variant="ghost" onClick={onClose} disabled={loading}>Cancelar</Button>
-        <Button onClick={handleSubmit} loading={loading} icon="📋">Postular y enviar enlace</Button>
+        <Button onClick={handleSubmit} loading={loading} icon={<MdSend size={14}/>} >Postular y enviar enlace</Button>
       </div>
     </Modal>
   )
@@ -401,7 +416,7 @@ function ModalDecision({open,onClose,fila,compania,userId,onSaved}) {
         display:'grid',gridTemplateColumns:'1fr 1fr',gap:'5px 14px'}}>
         <div><strong>Vacante:</strong> {fila.vacante||fila.vacante_descripcion||'—'}</div>
         <div><strong>Evaluación:</strong> {fila.estado_intento||'—'}</div>
-        <div><strong>θ Final:</strong> {fila.theta_final!=null?<span style={{color:'var(--primary)',fontWeight:700}}>{Number(fila.theta_final).toFixed(3)}</span>:'Sin evaluación'}</div>
+        <div><strong>Puntaje Final:</strong> {fila.puntaje_final!=null?<span style={{color:'var(--primary)',fontWeight:700}}>{Number(fila.puntaje_final).toFixed(3)}</span>:'Sin evaluación'}</div>
         <div><strong>Duración:</strong> {fila.duracion_minutos!=null?`${fila.duracion_minutos} min`:'—'}</div>
         <div><strong>Decisión anterior:</strong> {fila.decision||'Ninguna'}</div>
         <div><strong>Email:</strong> {fila.candidato_email||'—'}</div>
@@ -446,23 +461,20 @@ function ModalDecision({open,onClose,fila,compania,userId,onSaved}) {
           </div>
           <div style={{display:'flex',gap:10,justifyContent:'flex-end'}}>
             <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-            <Button icon="→" onClick={()=>{if(!estadoId){setMsg({type:'error',text:'Selecciona un estado.'});return}setMsg(null);setPaso('confirm')}}>
+            <Button icon={<MdArrowForward size={14}/>}  onClick={()=>{if(!estadoId){setMsg({type:'error',text:'Selecciona un estado.'});return}setMsg(null);setPaso('confirm')}}>
               Revisar y confirmar
             </Button>
           </div>
         </>
       ):(
         <div style={{textAlign:'center',paddingTop:10}}>
-          <div style={{fontSize:'3rem',marginBottom:12}}>{estadoDesc==='Seleccionado'?'✅':'❌'}</div>
           <h3 style={{marginBottom:8}}>¿Confirmar decisión?</h3>
           <p style={{color:'var(--text-muted)',marginBottom:5}}>Candidato: <strong>{fila.candidato_nombre_completo}</strong></p>
-          <p style={{color:'var(--text-muted)',marginBottom:5}}>Decisión: <strong style={{color:estadoDesc==='Seleccionado'?'#15803d':'#dc2626'}}>{estadoDesc}</strong></p>
           {obs&&<p style={{color:'var(--text-muted)',fontStyle:'italic',maxWidth:360,margin:'0 auto 12px'}}>"{obs.slice(0,120)}"</p>}
-          <p style={{fontSize:'.8rem',color:'var(--text-muted)',marginBottom:20}}>📧 Se enviará correo automático al candidato.</p>
+            <p style={{fontSize:'.8rem',color:'var(--text-muted)',marginBottom:20,display:'flex',alignItems:'center',gap:6}}><MdEmail size={14}/> Se enviará correo automático al candidato.</p>
           <div style={{display:'flex',gap:10,justifyContent:'center'}}>
-            <Button variant="ghost" onClick={()=>setPaso('form')} disabled={loading}>← Regresar</Button>
-            <Button onClick={handleEnviar} loading={loading}
-              style={{background:estadoDesc==='Seleccionado'?'#15803d':'#dc2626'}}>
+            <Button variant="ghost" onClick={()=>setPaso('form')} disabled={loading}><MdArrowBack size={14}/> Regresar</Button>
+            <Button onClick={handleEnviar} loading={loading}>
               Confirmar y notificar
             </Button>
           </div>
@@ -507,7 +519,7 @@ function ModalFinalizar({open,onClose,fila,compania,userId,onSaved}) {
           </div>
           <div style={{display:'flex',gap:10,justifyContent:'flex-end'}}>
             <Button variant="ghost" onClick={onClose} disabled={loading}>Cancelar</Button>
-            <Button onClick={handleFinalizar} loading={loading} icon="🏁">Confirmar y finalizar</Button>
+            <Button onClick={handleFinalizar} loading={loading} icon={<MdDoneAll size={14}/>} >Confirmar y finalizar</Button>
           </div>
         </>
       )}
@@ -520,6 +532,11 @@ export default function GestionPostulaciones() {
   const {user}=useAuth(); const cid=user?.compania
   const [tab,setTab]=useState('postulaciones')
   const [search,setSearch]=useState('')
+  const [nivelesSel,setNivelesSel]=useState([])
+  const [fechaDesde,setFechaDesde]=useState('')
+  const [fechaHasta,setFechaHasta]=useState('')
+  const [minDur,setMinDur]=useState('')
+  const [maxDur,setMaxDur]=useState('')
   const [modalPost,setModalPost]=useState(false)
   const [modalDec,setModalDec]=useState(false)
   const [modalFin,setModalFin]=useState(false)
@@ -528,26 +545,44 @@ export default function GestionPostulaciones() {
   const reporte=useFetch(()=>candidatosService.getReporte(cid),[cid])
   const reload=()=>{postulaciones.reload();reporte.reload()}
   const qL=search.toLowerCase()
-  const filtPost=postulaciones.data?.filter(p=>!search||[p.candidato_nombre_completo,p.vacante_descripcion,p.estado_descripcion].some(f=>f?.toLowerCase().includes(qL)))??[]
-  const filtRep=reporte.data?.filter(r=>!search||[r.candidato_nombre_completo,r.vacante].some(f=>f?.toLowerCase().includes(qL)))??[]
+  const enRangoFecha = (v) => {
+    if (!v) return true
+    const d = new Date(v)
+    if (fechaDesde && d < new Date(fechaDesde)) return false
+    if (fechaHasta && d > new Date(fechaHasta + 'T23:59:59')) return false
+    return true
+  }
+  const filtPost=postulaciones.data?.filter(p=>{
+    if (search && ![p.candidato_nombre_completo,p.vacante_descripcion,p.estado_descripcion].some(f=>f?.toLowerCase().includes(qL))) return false
+    if (!enRangoFecha(p.fecha_postulacion)) return false
+    return true
+  })??[]
+  const filtRep=reporte.data?.filter(r=>{
+    if (search && ![r.candidato_nombre_completo,r.vacante].some(f=>f?.toLowerCase().includes(qL))) return false
+    if (nivelesSel.length > 0 && r.puntaje_final != null && !nivelesSel.includes(getNivelPuntaje(r.puntaje_final))) return false
+    if (!enRangoFecha(r.fecha_postulacion)) return false
+    if (minDur && r.duracion_minutos != null && Number(r.duracion_minutos) < Number(minDur)) return false
+    if (maxDur && r.duracion_minutos != null && Number(r.duracion_minutos) > Number(maxDur)) return false
+    return true
+  })??[]
 
   const abrirDecision=fila=>{
     const fr=reporte.data?.find(r=>r.postulacion_id===fila.id||r.postulacion_id===fila.id_interno)
-    setFilaActiva(fr||{...fila,theta_final:null,duracion_minutos:null})
+    setFilaActiva(fr||{...fila,puntaje_final:null,duracion_minutos:null})
     setModalDec(true)
   }
   const abrirFinalizar=fila=>{setFilaActiva(fila);setModalFin(true)}
 
   const accsPost=row=>(
     <div style={{display:'flex',gap:6}}>
-      <Button size="sm" variant="secondary" icon="⚖️" onClick={()=>abrirDecision(row)}>Decisión</Button>
-      <Button size="sm" variant="ghost"     icon="🏁" onClick={()=>abrirFinalizar(row)}>Finalizar</Button>
+      <Button size="sm" variant="secondary" icon={<MdGavel size={14}/>}  onClick={()=>abrirDecision(row)}>Decisión</Button>
+      <Button size="sm" variant="ghost"     icon={<MdDoneAll size={14}/>}  onClick={()=>abrirFinalizar(row)}>Finalizar</Button>
     </div>
   )
   const accsRep=row=>(
     <div style={{display:'flex',gap:6}}>
-      <Button size="sm" variant="secondary" icon="⚖️" onClick={()=>abrirDecision(row)}>Decisión</Button>
-      <Button size="sm" variant="ghost"     icon="🏁" onClick={()=>abrirFinalizar(row)}>Finalizar</Button>
+      <Button size="sm" variant="secondary" icon={<MdGavel size={14}/>}  onClick={()=>abrirDecision(row)}>Decisión</Button>
+      <Button size="sm" variant="ghost"     icon={<MdDoneAll size={14}/>}  onClick={()=>abrirFinalizar(row)}>Finalizar</Button>
     </div>
   )
 
@@ -558,7 +593,7 @@ export default function GestionPostulaciones() {
         action={<Button icon={<MdOutlineCreateNewFolder />} onClick={()=>setModalPost(true)}>Nueva Postulación</Button>}/>
 
       <div style={{display:'flex',gap:8,marginBottom:20}}>
-        {[['postulaciones','📋 Postulaciones'],['reporte','📊 Reporte y Análisis']].map(([k,l])=>(
+        {[['postulaciones','Postulaciones'],['reporte','Reporte y Análisis']].map(([k,l])=>(
           <button key={k} onClick={()=>setTab(k)} style={{
             padding:'8px 20px',borderRadius:99,border:'none',cursor:'pointer',
             fontFamily:'var(--font)',fontWeight:600,fontSize:'.88rem',transition:'all .2s',
@@ -572,6 +607,51 @@ export default function GestionPostulaciones() {
       <div style={{marginBottom:14}}>
         <SearchBar value={search} onChange={setSearch} placeholder="Buscar candidato, vacante, estado..."/>
       </div>
+
+      <Card style={{marginBottom:14,padding:12}}>
+        <div style={{display:'flex',flexWrap:'wrap',gap:10,alignItems:'flex-end'}}>
+          <div style={{minWidth:260}}>
+            <label style={{fontSize:'.72rem',fontWeight:600,display:'block',marginBottom:6}}>Nivel de puntaje (multiple)</label>
+            <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+              {NIVELES.map(n=>{
+                const activo = nivelesSel.includes(n.label)
+                return (
+                  <button key={n.label} type="button"
+                    onClick={()=>setNivelesSel(prev=>activo?prev.filter(x=>x!==n.label):[...prev,n.label])}
+                    style={{padding:'4px 10px',borderRadius:99,border:'1.5px solid ' + (activo?'var(--primary)':'var(--border)'),
+                      background:activo?'var(--primary)':'var(--bg)',color:activo?'#fff':'var(--text)',
+                      fontSize:'.75rem',fontWeight:600,cursor:'pointer',fontFamily:'var(--font)'}}>
+                    {n.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+          <div>
+            <label style={{fontSize:'.72rem',fontWeight:600,display:'block',marginBottom:4}}>Duración mín (min)</label>
+            <input type="number" value={minDur} onChange={e=>setMinDur(e.target.value)}
+              style={{width:100,padding:'6px 8px',borderRadius:6,border:'1px solid var(--border)',fontFamily:'var(--font)',fontSize:'.8rem'}}/>
+          </div>
+          <div>
+            <label style={{fontSize:'.72rem',fontWeight:600,display:'block',marginBottom:4}}>Duración máx (min)</label>
+            <input type="number" value={maxDur} onChange={e=>setMaxDur(e.target.value)}
+              style={{width:100,padding:'6px 8px',borderRadius:6,border:'1px solid var(--border)',fontFamily:'var(--font)',fontSize:'.8rem'}}/>
+          </div>
+          <div>
+            <label style={{fontSize:'.72rem',fontWeight:600,display:'block',marginBottom:4}}>Desde</label>
+            <input type="date" value={fechaDesde} onChange={e=>setFechaDesde(e.target.value)}
+              style={{padding:'6px 8px',borderRadius:6,border:'1px solid var(--border)',fontFamily:'var(--font)',fontSize:'.8rem'}}/>
+          </div>
+          <div>
+            <label style={{fontSize:'.72rem',fontWeight:600,display:'block',marginBottom:4}}>Hasta</label>
+            <input type="date" value={fechaHasta} onChange={e=>setFechaHasta(e.target.value)}
+              style={{padding:'6px 8px',borderRadius:6,border:'1px solid var(--border)',fontFamily:'var(--font)',fontSize:'.8rem'}}/>
+          </div>
+          <Button variant="ghost" size="sm" onClick={()=>{setNivelesSel([]);setMinDur('');setMaxDur('');setFechaDesde('');setFechaHasta('')}}>
+            Limpiar filtros
+          </Button>
+        </div>
+      </Card>
 
       {tab==='postulaciones'?(
         postulaciones.loading?<Spinner/>:(
@@ -589,7 +669,7 @@ export default function GestionPostulaciones() {
             <Card>
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
                 <div>
-                  <h3 style={{margin:'0 0 3px',fontSize:'.95rem',fontWeight:700}}>📋 Reporte Ejecutivo</h3>
+                  <h3 style={{margin:'0 0 3px',fontSize:'.95rem',fontWeight:700,display:'flex',alignItems:'center',gap:6}}><MdBarChart size={18}/> Reporte Ejecutivo</h3>
                   <p style={{margin:0,fontSize:'.76rem',color:'var(--text-muted)'}}>
                     Datos completos de postulaciones con resultados de evaluación y toma de decisiones.
                   </p>

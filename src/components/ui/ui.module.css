@@ -133,3 +133,20 @@
 
 @keyframes fadeIn { from{opacity:0} to{opacity:1} }
 @keyframes slideUp { from{transform:translateY(16px);opacity:0} to{transform:translateY(0);opacity:1} }
+
+
+/* Responsive */
+@media (max-width: 640px) {
+  .card { padding: 16px; }
+  .pageTitle { font-size: 1.3rem; }
+  .pageHeader { flex-direction: column; align-items: stretch; }
+  .pageAction { justify-content: stretch; }
+  .pageAction button { width: 100%; }
+  .modal { max-height: 95vh; }
+  .modalBody { padding: 16px; }
+  .modalHeader { padding: 16px; }
+  .table th, .table td { padding: 8px 10px; font-size: .82rem; }
+  .searchBar { width: 100%; }
+  .empty { padding: 32px 16px; }
+  .emptyIcon { font-size: 2rem; }
+}

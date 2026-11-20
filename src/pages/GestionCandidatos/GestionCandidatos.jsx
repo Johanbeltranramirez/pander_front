@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useFetch } from '../../hooks/useFetch'
 import { useAuth } from '../../context/AuthContext'
 import { candidatosService } from '../../services'
+import { MdDescription, MdAttachFile, MdUpload, MdVisibility } from 'react-icons/md'
 import CrudPage from '../../components/ui/CrudPage'
 import { Input, Select, Modal, Button, Alert, Spinner } from '../../components/ui'
 
@@ -86,7 +87,7 @@ function ModalCV({ open, onClose, compania, candidatoId, candidatoNombre }) {
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={`📎 Documentos — ${candidatoNombre}`} size="md">
+    <Modal open={open} onClose={onClose} title={`Documentos - ${candidatoNombre}`} size="md">
       {msg && <Alert type={msg.type === 'ok' ? 'success' : 'error'} onClose={() => setMsg(null)} style={{ marginBottom: 12 }}>{msg.text}</Alert>}
 
       {/* Subir nuevo */}
@@ -106,12 +107,11 @@ function ModalCV({ open, onClose, compania, candidatoId, candidatoNombre }) {
           display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px',
           background: 'var(--primary-bg)', color: 'var(--primary)', border: '1.5px solid var(--primary-border)',
           borderRadius: 99, cursor: 'pointer', fontWeight: 600, fontSize: '.88rem',
-        }}>
-          📁 {file ? file.name : 'Seleccionar archivo'}
+          }}><MdAttachFile size={16}/> Seleccionar archivo
         </label>
         {file && (
           <div style={{ marginTop: 12 }}>
-            <Button onClick={handleUpload} loading={loading} icon="⬆️">Subir archivo</Button>
+            <Button onClick={handleUpload} loading={loading} icon={<MdUpload size={14}/>} >Subir archivo</Button>
           </div>
         )}
       </div>
@@ -129,7 +129,7 @@ function ModalCV({ open, onClose, compania, candidatoId, candidatoNombre }) {
                 padding: '10px 14px', background: 'var(--bg)', borderRadius: 8, border: '1px solid var(--border)',
               }}>
                 <div>
-                  <div style={{ fontWeight: 600, fontSize: '.88rem' }}>📄 {anx.nombre_archivo}</div>
+                  <div style={{ fontWeight: 600, fontSize: '.88rem', display:'flex', alignItems:'center', gap:6 }}><MdDescription size={14}/> {anx.nombre_archivo}</div>
                   <div style={{ fontSize: '.75rem', color: 'var(--text-muted)' }}>
                     {anx.tipo_archivo} · {anx.tamanio_bytes ? `${Math.round(anx.tamanio_bytes / 1024)} KB` : '?'}
                   </div>
@@ -172,7 +172,7 @@ export default function GestionCandidatos() {
   }
 
   const extraActions = row => (
-    <Button size="sm" variant="secondary" icon="📎"
+    <Button size="sm" variant="secondary" icon={<MdVisibility size={14}/>} 
       onClick={() => setCvModal({ id: row.id, nombre: row.nombre_completo || `#${row.id}` })}>
       CV
     </Button>

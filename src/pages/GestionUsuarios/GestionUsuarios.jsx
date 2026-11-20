@@ -201,9 +201,9 @@ export default function GestionUsuarios() {
             const res = await accesoService.createUsuario(cid, payload)
             const d = res.data
             if (d.correo_enviado) {
-              setNotif({ type: 'ok', text: `✅ Usuario "${d.login_generado}" creado. Credenciales enviadas al correo ${data.email}.` })
+              setNotif({ type: 'ok', text: `Usuario "${d.login_generado}" creado. Credenciales enviadas al correo ${data.email}.` })
             } else {
-              setNotif({ type: 'info', text: `✅ Usuario "${d.login_generado || data.login}" creado. No se pudo enviar el correo.` })
+              setNotif({ type: 'info', text: `Usuario "${d.login_generado || data.login}" creado. No se pudo enviar el correo.` })
             }
             setTimeout(() => setNotif(null), 6000)
             return res

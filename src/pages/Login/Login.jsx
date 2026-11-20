@@ -8,7 +8,7 @@ import cerebro from '../../assets/cerebro.png'
 import { GoPeople } from "react-icons/go";
 import { GiPadlock } from "react-icons/gi";
 import { FaExclamationCircle } from "react-icons/fa";
-import { MdVisibility, MdVisibilityOff } from 'react-icons/md'
+import { MdVisibility, MdVisibilityOff, MdCheckCircle } from 'react-icons/md'
 
 export default function Login() {
   const { login, loading } = useAuth()
@@ -143,7 +143,7 @@ export default function Login() {
               <div className={styles.features}>
                 {['Evaluaciones adaptativas', 'Reportes en tiempo real', 'Gestión multiempresa'].map(f => (
                   <div key={f} className={styles.featureItem}>
-                    <span className={styles.featureCheck}>✓</span> {f}
+                    <span className={styles.featureCheck}><MdCheckCircle size={14}/></span> {f}
                   </div>
                 ))}
               </div>

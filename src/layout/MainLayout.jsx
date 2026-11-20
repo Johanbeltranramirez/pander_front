@@ -12,7 +12,7 @@ import {
   MdPerson, MdExtension, MdWork, MdGroups, MdAssignment,
   MdSettings, MdBarChart, MdChevronRight, MdChevronLeft,
   MdExpandMore, MdExpandLess, MdLogout, MdRefresh,
-  MdSearch, MdClose, MdSwapHoriz,
+  MdSearch, MdClose, MdSwapHoriz, MdCheckCircle, MdMenu,
 } from 'react-icons/md'
 import { TbTableImport } from "react-icons/tb";
 
@@ -46,6 +46,64 @@ function buildTree(modulos) {
     else roots.push(map[m.id])
   })
   return roots
+}
+
+const NAV_GROUPS = [
+  { label: 'Inicio', items: [
+    { path: '/', label: 'Dashboard', icon: MdDashboard },
+  ]},
+  { label: 'Gestion de Talento', items: [
+    { path: '/gestion-candidatos',    label: 'Candidatos',     icon: MdGroups },
+    { path: '/gestion-vacantes',      label: 'Vacantes',       icon: MdWork },
+    { path: '/gestion-postulaciones', label: 'Postulaciones',  icon: MdAssignment },
+  ]},
+  { label: 'Evaluacion de Habilidades Blandas', items: [
+    { path: '/gestion-evaluaciones', label: 'Gestion de Evaluaciones', icon: MdSettings },
+    { path: '/evaluacion',           label: 'Reportes Estadisticos',   icon: MdBarChart },
+  ]},
+  { label: 'Administracion', items: [
+    { path: '/gestion-compania',   label: 'Companias',  icon: MdBusiness },
+    { path: '/gestion-unidades',   label: 'Unidades',   icon: MdAccountTree },
+    { path: '/gestion-roles',      label: 'Roles',      icon: MdKey },
+    { path: '/gestion-analistas',  label: 'Analistas',  icon: MdBadge },
+    { path: '/gestion-usuarios',   label: 'Usuarios',   icon: MdPerson },
+    { path: '/gestion-modulos',    label: 'Modulos',    icon: MdExtension },
+  ]},
+  { label: 'Datos', items: [
+    { path: '/importacion', label: 'Importacion Masiva', icon: TbTableImport },
+  ]},
+]
+
+const GROUP_ORDER = ['Inicio','Gestion de Talento','Evaluacion de Habilidades Blandas','Administracion','Datos','Otros']
+
+const ROUTE_GROUP = {
+  '/': 'Inicio',
+  '/gestion-candidatos': 'Gestion de Talento',
+  '/gestion-vacantes': 'Gestion de Talento',
+  '/gestion-postulaciones': 'Gestion de Talento',
+  '/gestion-evaluaciones': 'Evaluacion de Habilidades Blandas',
+  '/evaluacion': 'Evaluacion de Habilidades Blandas',
+  '/gestion-compania': 'Administracion',
+  '/gestion-unidades': 'Administracion',
+  '/gestion-roles': 'Administracion',
+  '/gestion-analistas': 'Administracion',
+  '/gestion-usuarios': 'Administracion',
+  '/gestion-modulos': 'Administracion',
+  '/importacion': 'Datos',
+}
+
+function grupoDeRuta(path) {
+  return ROUTE_GROUP[path] || 'Otros'
+}
+
+const ALL_NAV_ITEMS = NAV_GROUPS.flatMap(g =>
+  g.items.map(it => ({ ...it, group: g.label }))
+)
+const CONFIGURED_PATHS = new Set(ALL_NAV_ITEMS.map(i => i.path))
+
+function getAllowedPaths(user) {
+  if (user?.ind_super_usuario) return null
+  return new Set((user?.modulos ?? []).map(m => m.nombre_aplicacion))
 }
 
 // ── NavNode con react-icons ───────────────────────────────────
@@ -185,7 +243,7 @@ function SelectorCompania({ onClose }) {
                 <div style={{ fontSize:'.74rem', color:'var(--text-muted)' }}>NIT: {c.nit}</div>
               </div>
               {c.id===user.compania
-                ? <span style={{ fontSize:'.76rem', color:'var(--primary)', fontWeight:700 }}>✓ Actual</span>
+                ? <span style={{ fontSize:'.76rem', color:'var(--primary)', fontWeight:700, display:'inline-flex', alignItems:'center', gap:4 }}><MdCheckCircle size={14}/> Actual</span>
                 : cambiando===c.id
                   ? <MdRefresh size={14} style={{ color:'var(--text-muted)', animation:'spin 1s linear infinite' }}/>
                   : null}
@@ -215,14 +273,36 @@ export default function MainLayout() {
     return () => clearInterval(id)
   }, [])
 
+  useEffect(() => {
+    if (window.innerWidth <= 768) setCollapsed(true)
+  }, [location.pathname])
+
   if (!user) return null
 
   const modulosMenu = useMemo(() => buildTree(user?.modulos ?? []), [user?.modulos])
 
-  const pageLabel = useMemo(() => {
-    const mod = (user?.modulos ?? []).find(m => m.nombre_aplicacion === location.pathname)
-    return mod?.descripcion || location.pathname.replace('/', '').replace(/-/g, ' ') || 'Pander'
+  const visibleGroups = useMemo(() => {
+    const roots = (modulosMenu || []).filter(n => n.ind_visible !== false)
+    const grouped = {}
+    GROUP_ORDER.forEach(g => { grouped[g] = [] })
+    roots.forEach(n => {
+      const g = grupoDeRuta(n.nombre_aplicacion)
+      if (!grouped[g]) grouped[g] = []
+      grouped[g].push(n)
+    })
+    return GROUP_ORDER
+      .map(g => ({ label: g, items: (grouped[g] || []).sort((a,b) => (a.orden||0)-(b.orden||0)) }))
+      .filter(g => g.items.length > 0)
+  }, [modulosMenu])
+
+  const currentItem = useMemo(() => {
+    const all = (user?.modulos ?? []).find(m => m.nombre_aplicacion === location.pathname)
+    return all ? { path: all.nombre_aplicacion, label: all.descripcion, group: grupoDeRuta(all.nombre_aplicacion) } : null
   }, [location.pathname, user?.modulos])
+
+  const pageLabel = useMemo(() => {
+    return currentItem?.label || location.pathname.replace('/', '').replace(/-/g, ' ') || 'Pander'
+  }, [currentItem, location.pathname])
 
   const handleLogout = () => { logout(); navigate('/login', { replace: true }) }
 
@@ -254,14 +334,24 @@ export default function MainLayout() {
 
         {/* Menú dinámico */}
         <nav className={styles.nav}>
-          {modulosMenu.length === 0 ? (
+          {visibleGroups.length === 0 ? (
             !collapsed && (
               <div style={{ padding:'12px 16px', color:'rgba(255,255,255,.4)', fontSize:'.8rem' }}>
-                Sin módulos asignados
+                Sin modulos asignados
               </div>
             )
-          ) : modulosMenu.map(nodo => (
-            <NavNode key={nodo.id} nodo={nodo} collapsed={collapsed} />
+          ) : visibleGroups.map(group => (
+            <div key={group.label} style={{ marginBottom: 6 }}>
+              {!collapsed && (
+                <div style={{ padding:'10px 12px 4px', fontSize:'.68rem', fontWeight:700,
+                  color:'rgba(255,255,255,.45)', textTransform:'uppercase', letterSpacing:'.08em' }}>
+                  {group.label}
+                </div>
+              )}
+              {group.items.map(nodo => (
+                <NavNode key={nodo.id} nodo={nodo} collapsed={collapsed} />
+              ))}
+            </div>
           ))}
         </nav>
 
@@ -279,9 +369,16 @@ export default function MainLayout() {
       <div className={styles.content}>
         <header className={styles.topbar}>
           <div className={styles.topbarLeft}>
+            <button className={styles.menuBtn} onClick={() => setCollapsed(c => !c)} aria-label="Menú">
+              <MdMenu size={22}/>
+            </button>
             <span className={styles.topbarBreadcrumb}>
               <MdDashboard size={14} style={{ marginRight:4, verticalAlign:'middle' }}/>
-              Pander › <strong>{pageLabel}</strong>
+              Pander
+              {currentItem?.group && currentItem.group !== 'Inicio' && (
+                <span> &rsaquo; {currentItem.group}</span>
+              )}
+              <span> &rsaquo; <strong>{pageLabel}</strong></span>
             </span>
           </div>
           <div className={styles.topbarRight}>

@@ -7,17 +7,18 @@ import {
 } from 'recharts'
 import { useFetch } from '../../hooks/useFetch'
 import { useAuth }  from '../../context/AuthContext'
+import { useNavigate } from 'react-router-dom'
 import { evaluacionService, candidatosService, vacantesService } from '../../services'
 import { Card, Spinner, Badge } from '../../components/ui'
 
 import {
   MdBarChart, MdPeople, MdWork, MdAssignment, MdTrendingUp,
   MdFilterList, MdRefresh, MdOutlineSchool, MdCheckCircle,
-  MdHourglassEmpty, MdCancel, MdInfo,
+  MdHourglassEmpty, MdCancel, MdInfo, MdSettings,
 } from 'react-icons/md'
 import { BiBrain } from 'react-icons/bi'
 
-// ── Niveles θ ─────────────────────────────────────────────────
+// ── Niveles Puntaje ─────────────────────────────────────────────────
 const NIVELES = [
   { label:'Sobresaliente', min: 1.5, color:'#15803d' },
   { label:'Alto',          min: 0.5, color:'#2563eb' },
@@ -25,10 +26,10 @@ const NIVELES = [
   { label:'Bajo',          min:-1.5, color:'#ef4444' },
   { label:'Muy Bajo',      min:-4.0, color:'#7f1d1d' },
 ]
-function getNivel(theta) {
-  if (theta == null) return null
+function getNivel(puntaje) {
+  if (puntaje == null) return null
   for (let i = 0; i < NIVELES.length; i++) {
-    if (theta >= NIVELES[i].min) return NIVELES[i]
+    if (puntaje >= NIVELES[i].min) return NIVELES[i]
   }
   return NIVELES[NIVELES.length - 1]
 }
@@ -130,8 +131,8 @@ function GraficaEstados({ intentos }) {
   )
 }
 
-// ── Gráfica: θ por evaluación ─────────────────────────────────
-function GraficaTheta({ intentos }) {
+// ── Gráfica: Puntaje por evaluación ─────────────────────────────────
+function Graficapuntaje({ intentos }) {
   const data = useMemo(() => {
     const g = {}
     intentos?.filter(i => i.estado_descripcion==='Completado' && i.habilidad_estim!=null)
@@ -142,8 +143,8 @@ function GraficaTheta({ intentos }) {
       })
     return Object.entries(g).map(([name,vals]) => {
       const avg = vals.reduce((a,b)=>a+b,0)/vals.length
-      return { name, theta:+avg.toFixed(3), n:vals.length, color:getNivel(avg)?.color||'#94a3b8' }
-    }).sort((a,b)=>b.theta-a.theta)
+      return { name, puntaje:+avg.toFixed(3), n:vals.length, color:getNivel(avg)?.color||'#94a3b8' }
+    }).sort((a,b)=>b.puntaje-a.puntaje)
   }, [intentos])
 
   if (!data.length) return <div style={{textAlign:'center',color:'var(--text-muted)',padding:30}}>Sin datos</div>
@@ -155,10 +156,10 @@ function GraficaTheta({ intentos }) {
         <XAxis dataKey="name" tick={{fontSize:10}}/>
         <YAxis domain={[-2,2]} tick={{fontSize:10}}/>
         <Tooltip content={<CustomTooltip/>}
-          formatter={(v,_,{payload})=>[`θ=${v} · n=${payload.n}`,'Promedio']}/>
-        <Bar dataKey="theta" radius={[6,6,0,0]}>
+          formatter={(v,_,{payload})=>[`Puntaje=${v} · n=${payload.n}`,'Promedio']}/>
+        <Bar dataKey="puntaje" radius={[6,6,0,0]}>
           {data.map((d,i)=><Cell key={i} fill={d.color}/>)}
-          <LabelList dataKey="theta" position="top" style={{fontSize:10}}
+          <LabelList dataKey="puntaje" position="top" style={{fontSize:10}}
             formatter={v => Number(v).toFixed(2)}/>
         </Bar>
       </BarChart>
@@ -208,6 +209,7 @@ function GraficaNiveles({ intentos }) {
 // ── DASHBOARD PRINCIPAL ───────────────────────────────────────
 export default function Dashboard() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const cid      = user?.compania
   const [filtro, setFiltro] = useState('todos')
   const [graficaActiva, setGraficaActiva] = useState('niveles')
@@ -230,7 +232,7 @@ export default function Dashboard() {
   }, [intentos.data, filtro])
 
   const completados = (intentos.data??[]).filter(i=>i.estado_descripcion==='Completado')
-  const avgTheta    = completados.length
+  const avgpuntaje    = completados.length
     ? (completados.reduce((s,i)=>s+(i.habilidad_estim||0),0)/completados.length).toFixed(3)
     : null
   const topNivel = useMemo(() => {
@@ -242,7 +244,7 @@ export default function Dashboard() {
 
   const GRAFICAS = [
     { id:'niveles',  label:'Distribución Niveles' },
-    { id:'theta',    label:'θ por Evaluación'    },
+    { id:'puntaje',    label:'Puntaje por Evaluación'    },
     { id:'estados',  label:'Estados de Intentos' },
   ]
 
@@ -272,12 +274,43 @@ export default function Dashboard() {
           value={intentos.data?.length}/>
         <KPICard icon={MdCheckCircle}  label="Completados"         color="#15803d"
           value={completados.length}/>
-        <KPICard icon={MdTrendingUp}   label="θ Promedio"          color="#f59e0b"
-          value={avgTheta} sublabel={topNivel || ''}/>
+        <KPICard icon={MdTrendingUp}   label="Puntaje Promedio"          color="#f59e0b"
+          value={avgpuntaje} sublabel={topNivel || ''}/>
         <KPICard icon={MdOutlineSchool} label="Evaluaciones activas" color="#0891b2"
           value={(() => { const d = evals.data; return Array.isArray(d) ? d.filter(e=>e.ind_activa).length : d?.evaluaciones?.filter(e=>e.ind_activa).length })()} />
       </div>
 
+     {/* {/* Accesos rapidos - flujo de seleccion (usabilidad) 
+      <Card style={{ marginBottom: 20 }}>
+        <h3 style={{ margin:'0 0 12px', fontSize:'.95rem', fontWeight:700,
+          display:'flex', alignItems:'center', gap:7 }}>
+          <MdAssignment size={17} color="var(--primary)"/> Accesos rapidos del proceso de seleccion
+        </h3>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))', gap:10 }}>
+          {[
+            { label:'Nueva vacante', path:'/gestion-vacantes', icon:MdWork, color:'#2563eb' },
+            { label:'Registrar candidato', path:'/gestion-candidatos', icon:MdPeople, color:'#15803d' },
+            { label:'Nueva postulacion', path:'/gestion-postulaciones', icon:MdAssignment, color:'#7c3aed' },
+            { label:'Gestionar evaluaciones', path:'/gestion-evaluaciones', icon:MdSettings, color:'#0891b2' },
+            { label:'Ver reportes', path:'/evaluacion', icon:MdBarChart, color:'#f59e0b' },
+          ].map(a => {
+            const Ic = a.icon
+            return (
+              <button key={a.path} onClick={() => navigate(a.path)} style={{
+                display:'flex', alignItems:'center', gap:10, padding:'12px 14px',
+                borderRadius:10, border:'1.5px solid var(--border)', background:'var(--bg)',
+                cursor:'pointer', fontFamily:'var(--font)', fontSize:'.84rem', fontWeight:600,
+                color:'var(--text)', transition:'all .15s' }}>
+                <div style={{ width:34, height:34, borderRadius:9, background:`${a.color}18`,
+                  display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                  <Ic size={18} color={a.color}/>
+                </div>
+                {a.label}
+              </button>
+            )
+          })}
+        </div>
+      </Card>*/}
       {/* Filtros */}
       <PanelFiltros filtro={filtro} setFiltro={setFiltro} onRefresh={refresh}/>
 
@@ -302,7 +335,7 @@ export default function Dashboard() {
         {intentos.loading ? <Spinner label="Cargando datos..."/> : (
           <>
             {graficaActiva === 'niveles' && <GraficaNiveles intentos={intentosFiltrados}/>}
-            {graficaActiva === 'theta'   && <GraficaTheta   intentos={intentosFiltrados}/>}
+            {graficaActiva === 'puntaje'   && <Graficapuntaje   intentos={intentosFiltrados}/>}
             {graficaActiva === 'estados' && <GraficaEstados intentos={intentosFiltrados}/>}
           </>
         )}
@@ -338,7 +371,7 @@ export default function Dashboard() {
                   <div style={{ textAlign:'right', flexShrink:0 }}>
                     {i.habilidad_estim!=null && (
                       <div style={{ fontWeight:700, color:niv?.color||'var(--primary)', fontSize:'.88rem' }}>
-                        θ {Number(i.habilidad_estim).toFixed(2)}
+                        Puntaje {Number(i.habilidad_estim).toFixed(2)}
                       </div>
                     )}
                     <Badge variant={i.estado_descripcion==='Completado'?'success':'warning'} style={{fontSize:'.7rem'}}>
