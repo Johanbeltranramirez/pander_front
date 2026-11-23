@@ -1,5 +1,3 @@
-// src/pages/GestionPostulaciones/GestionPostulaciones.jsx — v7
-// Dashboard con filtros configurables, etiquetas en gráficas, descripciones
 import { useState, useMemo, useRef } from 'react'
 import {
   BarChart, Bar, PieChart, Pie, Cell,
@@ -32,10 +30,10 @@ const NIVELES = [
   { label:'Bajo',          min:-1.5 },
   { label:'Muy Bajo',      min:-4.0 },
 ]
-function getNivelPuntaje(puntaje) {
-  if (puntaje == null) return null
+function getNiveltheta(theta) {
+  if (theta == null) return null
   for (let i = 0; i < NIVELES.length; i++) {
-    if (puntaje >= NIVELES[i].min) return NIVELES[i].label
+    if (theta >= NIVELES[i].min) return NIVELES[i].label
   }
   return NIVELES[NIVELES.length - 1].label
 }
@@ -116,14 +114,14 @@ const COLS_REP = [
   {key:'vacante',label:'Vacante',render:v=><span title={v}>{v?.slice(0,35)}{v?.length>35?'…':''}</span>},
   {key:'estado_postulacion',label:'Estado',width:130,render:v=>nBadge(v,C_ESTADO)},
   {key:'decision',label:'Decisión',width:120,render:v=>v?nBadge(v,C_DECISION):<span style={{color:'var(--text-muted)'}}>—</span>},
-  {key:'puntaje_final',label:'Puntaje Final',width:90,render:v=>v!=null?<strong style={{color:'var(--primary)'}}>{Number(v).toFixed(3)}</strong>:'—'},
+  {key:'theta_final',label:'Puntaje Final',width:90,render:v=>v!=null?<strong style={{color:'var(--primary)'}}>{Number(v).toFixed(3)}</strong>:'—'},
   {key:'estado_intento',label:'Evaluación',width:110,render:v=>v?nBadge(v,{Completado:'success','En Progreso':'warning'}):'—'},
   {key:'duracion_minutos',label:'Duración',width:80,render:v=>v!=null?`${v} min`:'—'},
 ]
 const COLS_EXP = [
   {key:'candidato_nombre_completo',label:'Candidato'},{key:'vacante',label:'Vacante'},
   {key:'unidad',label:'Unidad'},{key:'estado_postulacion',label:'Estado'},{key:'decision',label:'Decisión'},
-  {key:'puntaje_final',label:'Puntaje Final'},{key:'error_estandar_final',label:'SE(Puntaje)'},
+  {key:'theta_final',label:'Puntaje Final'},{key:'error_estandar_final',label:'SE(Puntaje)'},
   {key:'estado_intento',label:'Estado Evaluación'},{key:'duracion_minutos',label:'Duración (min)'},
   {key:'candidato_email',label:'Email'},{key:'candidato_telefono',label:'Teléfono'},
 ]
@@ -146,9 +144,9 @@ const GRAFICAS_DEF = [
     campo:'decision', tipo:'pie',
   },
   {
-    id:'puntaje_vacante', label:'Puntaje Promedio × Vacante',
+    id:'theta_vacante', label:'Puntaje Promedio × Vacante',
     desc:'Nivel de competencia estimado (Puntaje) promedio de los candidatos evaluados por vacante.',
-    campo:'vacante', metrica:'puntaje_final', tipo:'bar_avg',
+    campo:'vacante', metrica:'theta_final', tipo:'bar_avg',
   },
   {
     id:'unidad', label:'Candidatos × Unidad Org.',
@@ -416,7 +414,7 @@ function ModalDecision({open,onClose,fila,compania,userId,onSaved}) {
         display:'grid',gridTemplateColumns:'1fr 1fr',gap:'5px 14px'}}>
         <div><strong>Vacante:</strong> {fila.vacante||fila.vacante_descripcion||'—'}</div>
         <div><strong>Evaluación:</strong> {fila.estado_intento||'—'}</div>
-        <div><strong>Puntaje Final:</strong> {fila.puntaje_final!=null?<span style={{color:'var(--primary)',fontWeight:700}}>{Number(fila.puntaje_final).toFixed(3)}</span>:'Sin evaluación'}</div>
+        <div><strong>Puntaje Final:</strong> {fila.theta_final!=null?<span style={{color:'var(--primary)',fontWeight:700}}>{Number(fila.theta_final).toFixed(3)}</span>:'Sin evaluación'}</div>
         <div><strong>Duración:</strong> {fila.duracion_minutos!=null?`${fila.duracion_minutos} min`:'—'}</div>
         <div><strong>Decisión anterior:</strong> {fila.decision||'Ninguna'}</div>
         <div><strong>Email:</strong> {fila.candidato_email||'—'}</div>
@@ -559,7 +557,7 @@ export default function GestionPostulaciones() {
   })??[]
   const filtRep=reporte.data?.filter(r=>{
     if (search && ![r.candidato_nombre_completo,r.vacante].some(f=>f?.toLowerCase().includes(qL))) return false
-    if (nivelesSel.length > 0 && r.puntaje_final != null && !nivelesSel.includes(getNivelPuntaje(r.puntaje_final))) return false
+    if (nivelesSel.length > 0 && r.theta_final != null && !nivelesSel.includes(getNiveltheta(r.theta_final))) return false
     if (!enRangoFecha(r.fecha_postulacion)) return false
     if (minDur && r.duracion_minutos != null && Number(r.duracion_minutos) < Number(minDur)) return false
     if (maxDur && r.duracion_minutos != null && Number(r.duracion_minutos) > Number(maxDur)) return false
@@ -568,7 +566,7 @@ export default function GestionPostulaciones() {
 
   const abrirDecision=fila=>{
     const fr=reporte.data?.find(r=>r.postulacion_id===fila.id||r.postulacion_id===fila.id_interno)
-    setFilaActiva(fr||{...fila,puntaje_final:null,duracion_minutos:null})
+    setFilaActiva(fr||{...fila,theta_final:null,duracion_minutos:null})
     setModalDec(true)
   }
   const abrirFinalizar=fila=>{setFilaActiva(fila);setModalFin(true)}
@@ -611,7 +609,7 @@ export default function GestionPostulaciones() {
       <Card style={{marginBottom:14,padding:12}}>
         <div style={{display:'flex',flexWrap:'wrap',gap:10,alignItems:'flex-end'}}>
           <div style={{minWidth:260}}>
-            <label style={{fontSize:'.72rem',fontWeight:600,display:'block',marginBottom:6}}>Nivel de puntaje (multiple)</label>
+            <label style={{fontSize:'.72rem',fontWeight:600,display:'block',marginBottom:6}}>Nivel de Puntaje (multiple)</label>
             <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
               {NIVELES.map(n=>{
                 const activo = nivelesSel.includes(n.label)
