@@ -1,4 +1,3 @@
-// src/pages/Dashboard/Dashboard.jsx — mejorado con react-icons + filtros + gráficas
 import { useState, useMemo } from 'react'
 import {
   BarChart, Bar, PieChart, Pie, Cell, LineChart, Line,
@@ -26,10 +25,10 @@ const NIVELES = [
   { label:'Bajo',          min:-1.5, color:'#ef4444' },
   { label:'Muy Bajo',      min:-4.0, color:'#7f1d1d' },
 ]
-function getNivel(puntaje) {
-  if (puntaje == null) return null
+function getNivel(theta) {
+  if (theta == null) return null
   for (let i = 0; i < NIVELES.length; i++) {
-    if (puntaje >= NIVELES[i].min) return NIVELES[i]
+    if (theta >= NIVELES[i].min) return NIVELES[i]
   }
   return NIVELES[NIVELES.length - 1]
 }
@@ -132,7 +131,7 @@ function GraficaEstados({ intentos }) {
 }
 
 // ── Gráfica: Puntaje por evaluación ─────────────────────────────────
-function Graficapuntaje({ intentos }) {
+function Graficatheta({ intentos }) {
   const data = useMemo(() => {
     const g = {}
     intentos?.filter(i => i.estado_descripcion==='Completado' && i.habilidad_estim!=null)
@@ -143,8 +142,8 @@ function Graficapuntaje({ intentos }) {
       })
     return Object.entries(g).map(([name,vals]) => {
       const avg = vals.reduce((a,b)=>a+b,0)/vals.length
-      return { name, puntaje:+avg.toFixed(3), n:vals.length, color:getNivel(avg)?.color||'#94a3b8' }
-    }).sort((a,b)=>b.puntaje-a.puntaje)
+      return { name, theta:+avg.toFixed(3), n:vals.length, color:getNivel(avg)?.color||'#94a3b8' }
+    }).sort((a,b)=>b.theta-a.theta)
   }, [intentos])
 
   if (!data.length) return <div style={{textAlign:'center',color:'var(--text-muted)',padding:30}}>Sin datos</div>
@@ -157,9 +156,9 @@ function Graficapuntaje({ intentos }) {
         <YAxis domain={[-2,2]} tick={{fontSize:10}}/>
         <Tooltip content={<CustomTooltip/>}
           formatter={(v,_,{payload})=>[`Puntaje=${v} · n=${payload.n}`,'Promedio']}/>
-        <Bar dataKey="puntaje" radius={[6,6,0,0]}>
+        <Bar dataKey="Puntaje" radius={[6,6,0,0]}>
           {data.map((d,i)=><Cell key={i} fill={d.color}/>)}
-          <LabelList dataKey="puntaje" position="top" style={{fontSize:10}}
+          <LabelList dataKey="Puntaje" position="top" style={{fontSize:10}}
             formatter={v => Number(v).toFixed(2)}/>
         </Bar>
       </BarChart>
@@ -232,7 +231,7 @@ export default function Dashboard() {
   }, [intentos.data, filtro])
 
   const completados = (intentos.data??[]).filter(i=>i.estado_descripcion==='Completado')
-  const avgpuntaje    = completados.length
+  const avgtheta    = completados.length
     ? (completados.reduce((s,i)=>s+(i.habilidad_estim||0),0)/completados.length).toFixed(3)
     : null
   const topNivel = useMemo(() => {
@@ -244,7 +243,7 @@ export default function Dashboard() {
 
   const GRAFICAS = [
     { id:'niveles',  label:'Distribución Niveles' },
-    { id:'puntaje',    label:'Puntaje por Evaluación'    },
+    { id:'theta',    label:'Puntaje por Evaluación'    },
     { id:'estados',  label:'Estados de Intentos' },
   ]
 
@@ -275,7 +274,7 @@ export default function Dashboard() {
         <KPICard icon={MdCheckCircle}  label="Completados"         color="#15803d"
           value={completados.length}/>
         <KPICard icon={MdTrendingUp}   label="Puntaje Promedio"          color="#f59e0b"
-          value={avgpuntaje} sublabel={topNivel || ''}/>
+          value={avgtheta} sublabel={topNivel || ''}/>
         <KPICard icon={MdOutlineSchool} label="Evaluaciones activas" color="#0891b2"
           value={(() => { const d = evals.data; return Array.isArray(d) ? d.filter(e=>e.ind_activa).length : d?.evaluaciones?.filter(e=>e.ind_activa).length })()} />
       </div>
@@ -335,7 +334,7 @@ export default function Dashboard() {
         {intentos.loading ? <Spinner label="Cargando datos..."/> : (
           <>
             {graficaActiva === 'niveles' && <GraficaNiveles intentos={intentosFiltrados}/>}
-            {graficaActiva === 'puntaje'   && <Graficapuntaje   intentos={intentosFiltrados}/>}
+            {graficaActiva === 'Puntaje'   && <Graficatheta   intentos={intentosFiltrados}/>}
             {graficaActiva === 'estados' && <GraficaEstados intentos={intentosFiltrados}/>}
           </>
         )}

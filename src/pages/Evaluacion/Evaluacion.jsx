@@ -1,13 +1,3 @@
-// src/pages/Evaluacion/Evaluacion.jsx — DEFINITIVO
-// 7 Gráficas interactivas + exportación PNG/JPG/WEBP/PDF (gráficas) + Excel (tablas)
-// Gráficas:
-//   1. Niveles por Vacante (barras apiladas horizontales)  ← PRINCIPAL NUEVO
-//   2. Distribución global de Niveles Puntaje (donut)
-//   3. Puntaje Promedio por Evaluación (barras)
-//   4. Dispersión Puntaje vs SE (scatter — precisión del CAT)
-//   5. Evolución Temporal Puntaje (línea)
-//   6. Duración promedio por Evaluación (barras agrupadas)
-//   7. Puntaje por Candidato Top-15 (barras horizontales)
 import { useState, useMemo, useRef } from 'react'
 import {
   BarChart, Bar, PieChart, Pie, Cell,
@@ -31,15 +21,15 @@ const NIVELES = [
   { label: 'Muy Bajo',      min: -4.0, max: -1.5, color: '#7f1d1d' },
 ]
 
-function getNivel(puntaje) {
-  if (puntaje == null) return null
-  return NIVELES.find(n => puntaje >= n.min && puntaje < n.max)
-    ?? (puntaje >= 1.5 ? NIVELES[0] : NIVELES[NIVELES.length - 1])
+function getNivel(theta) {
+  if (theta == null) return null
+  return NIVELES.find(n => theta >= n.min && theta < n.max)
+    ?? (theta >= 1.5 ? NIVELES[0] : NIVELES[NIVELES.length - 1])
 }
 
-function NivelBadge({ puntaje }) {
-  if (puntaje == null) return <span style={{ color: 'var(--text-muted)' }}>—</span>
-  const n = getNivel(puntaje)
+function NivelBadge({ theta }) {
+  if (theta == null) return <span style={{ color: 'var(--text-muted)' }}>—</span>
+  const n = getNivel(theta)
   if (!n) return <span style={{ color: 'var(--text-muted)' }}>—</span>
   return (
     <span style={{
@@ -151,10 +141,10 @@ function G1NivelesPorVacante({ reporte }) {
     if (!reporte?.length) return []
     const g = {}
     reporte.forEach(r => {
-      if (r.puntaje_final == null) return
+      if (r.theta_final == null) return
       const k = (r.vacante || 'Sin vacante').slice(0, 30)
       if (!g[k]) { g[k] = { vacante: k }; NIVELES.forEach(n => { g[k][n.label] = 0 }) }
-      const niv = getNivel(r.puntaje_final)
+      const niv = getNivel(r.theta_final)
       if (niv) g[k][niv.label]++
     })
     return Object.values(g)
@@ -243,7 +233,7 @@ function G2Distribucion({ intentos }) {
 // ════════════════════════════════════════════════════════════════
 // GRÁFICO 3 — Puntaje PROMEDIO POR EVALUACIÓN
 // ════════════════════════════════════════════════════════════════
-function G3puntajeEval({ intentos }) {
+function G3thetaEval({ intentos }) {
   const ref = useRef(null)
   const data = useMemo(() => {
     const g = {}
@@ -254,8 +244,8 @@ function G3puntajeEval({ intentos }) {
     })
     return Object.entries(g).filter(([, v]) => v.length).map(([name, vals]) => {
       const avg = vals.reduce((a, b) => a + b, 0) / vals.length
-      return { name, puntaje: +avg.toFixed(3), n: vals.length, color: getNivel(avg)?.color ?? '#94a3b8' }
-    }).sort((a, b) => b.puntaje - a.puntaje)
+      return { name, Puntaje: +avg.toFixed(3), n: vals.length, color: getNivel(avg)?.color ?? '#94a3b8' }
+    }).sort((a, b) => b.Puntaje - a.Puntaje)
   }, [intentos])
 
   if (!data.length) return <NoData />
@@ -263,7 +253,7 @@ function G3puntajeEval({ intentos }) {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
-        <BtnGrafica refEl={ref} nombre="puntaje_promedio_evaluacion" />
+        <BtnGrafica refEl={ref} nombre="theta_promedio_evaluacion" />
       </div>
       <div ref={ref}>
         <ResponsiveContainer width="100%" height={260}>
@@ -271,12 +261,12 @@ function G3puntajeEval({ intentos }) {
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
             <XAxis dataKey="name" tick={{ fontSize: 11 }} />
             <YAxis domain={[-2, 2]} tick={{ fontSize: 11 }}
-              label={{ value: 'Puntaje', angle: -90, position: 'insideLeft', fontSize: 13 }} />
+              label={{ value: 'theta', angle: -90, position: 'insideLeft', fontSize: 13 }} />
             <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="4 2" />
-            <Tooltip content={<TT />} formatter={(v, _, { payload }) => [`Puntaje=${v} · n=${payload.n}`, 'Promedio']} />
-            <Bar dataKey="puntaje" radius={[6, 6, 0, 0]}>
+            <Tooltip content={<TT />} formatter={(v, _, { payload }) => [`theta=${v} · n=${payload.n}`, 'Promedio']} />
+            <Bar dataKey="theta" radius={[6, 6, 0, 0]}>
               {data.map((d, i) => <Cell key={i} fill={d.color} />)}
-              <LabelList dataKey="puntaje" position="top" style={{ fontSize: 10, fill: 'var(--text-muted)' }} />
+              <LabelList dataKey="theta" position="top" style={{ fontSize: 10, fill: 'var(--text-muted)' }} />
             </Bar>
           </BarChart>
         </ResponsiveContainer>
@@ -293,7 +283,7 @@ function G4Scatter({ intentos }) {
   const data = useMemo(() =>
     (intentos ?? []).filter(i => i.habilidad_estim != null && i.error_estandar != null)
       .map(i => ({
-        puntaje: +Number(i.habilidad_estim).toFixed(3),
+        Puntaje: +Number(i.habilidad_estim).toFixed(3),
         se:    +Number(i.error_estandar).toFixed(3),
         color: getNivel(i.habilidad_estim)?.color ?? '#94a3b8',
       })),
@@ -304,16 +294,16 @@ function G4Scatter({ intentos }) {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
-        <BtnGrafica refEl={ref} nombre="scatter_puntaje_se" />
+        <BtnGrafica refEl={ref} nombre="scatter_theta_se" />
       </div>
       <div ref={ref}>
         <ResponsiveContainer width="100%" height={260}>
           <ScatterChart margin={{ top: 10, right: 16, left: -10, bottom: 20 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-            <XAxis dataKey="puntaje" name="Puntaje" type="number" domain={[-2.5, 2.5]} tick={{ fontSize: 11 }}
-              label={{ value: 'Puntaje (habilidad estimada)', position: 'insideBottom', offset: -10, fontSize: 11 }} />
+            <XAxis dataKey="theta" name="theta" type="number" domain={[-2.5, 2.5]} tick={{ fontSize: 11 }}
+              label={{ value: 'theta (habilidad estimada)', position: 'insideBottom', offset: -10, fontSize: 11 }} />
             <YAxis dataKey="se" name="SE" type="number" tick={{ fontSize: 11 }}
-              label={{ value: 'SE(Puntaje)', angle: -90, position: 'insideLeft', fontSize: 11 }} />
+              label={{ value: 'SE(theta)', angle: -90, position: 'insideLeft', fontSize: 11 }} />
             <Tooltip cursor={{ strokeDasharray: '3 3' }}
               formatter={(v, name) => [Number(v).toFixed(3), name]} />
             <Scatter data={data}>
@@ -340,7 +330,7 @@ function G5Temporal({ intentos }) {
       .sort((a, b) => new Date(a.fecha_inicio) - new Date(b.fecha_inicio))
       .map(i => ({
         fecha: new Date(i.fecha_inicio).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' }),
-        puntaje: +Number(i.habilidad_estim).toFixed(3),
+        Puntaje: +Number(i.habilidad_estim).toFixed(3),
         cand:  (i.candidato_nombre_completo || '').split(' ')[0],
       })),
   [intentos])
@@ -350,7 +340,7 @@ function G5Temporal({ intentos }) {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
-        <BtnGrafica refEl={ref} nombre="evolucion_temporal_puntaje" />
+        <BtnGrafica refEl={ref} nombre="evolucion_temporal_theta" />
       </div>
       <div ref={ref}>
         <ResponsiveContainer width="100%" height={250}>
@@ -359,8 +349,8 @@ function G5Temporal({ intentos }) {
             <XAxis dataKey="fecha" tick={{ fontSize: 10 }} />
             <YAxis domain={[-2, 2]} tick={{ fontSize: 11 }} />
             <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="4 2" />
-            <Tooltip formatter={(v, _, { payload }) => [`Puntaje = ${v}  ·  ${payload.cand}`, 'Habilidad']} />
-            <Line type="monotone" dataKey="puntaje" stroke="var(--primary)" strokeWidth={2.5}
+            <Tooltip formatter={(v, _, { payload }) => [`theta = ${v}  ·  ${payload.cand}`, 'Habilidad']} />
+            <Line type="monotone" dataKey="theta" stroke="var(--primary)" strokeWidth={2.5}
               dot={{ r: 4, fill: 'var(--primary)', stroke: '#fff', strokeWidth: 2 }} activeDot={{ r: 6 }} />
           </LineChart>
         </ResponsiveContainer>
@@ -430,7 +420,7 @@ function G7Candidatos({ intentos }) {
       .slice(0, 15)
       .map(i => ({
         nombre: (i.candidato_nombre_completo || 'Sin nombre').slice(0, 22),
-        puntaje:  +Number(i.habilidad_estim).toFixed(3),
+        Puntaje:  +Number(i.habilidad_estim).toFixed(3),
         color:  getNivel(i.habilidad_estim)?.color ?? '#94a3b8',
       })),
   [intentos])
@@ -440,7 +430,7 @@ function G7Candidatos({ intentos }) {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
-        <BtnGrafica refEl={ref} nombre="puntaje_top15_candidatos" />
+        <BtnGrafica refEl={ref} nombre="theta_top15_candidatos" />
       </div>
       <div ref={ref}>
         <ResponsiveContainer width="100%" height={Math.max(220, data.length * 30)}>
@@ -449,10 +439,10 @@ function G7Candidatos({ intentos }) {
             <XAxis type="number" domain={[-2, 2]} tick={{ fontSize: 11 }} />
             <YAxis type="category" dataKey="nombre" width={140} tick={{ fontSize: 10 }} />
             <ReferenceLine x={0} stroke="#94a3b8" strokeDasharray="4 2" />
-            <Tooltip formatter={v => [`Puntaje = ${Number(v).toFixed(3)}`, 'Habilidad estimada']} />
-            <Bar dataKey="puntaje" radius={[0, 6, 6, 0]}>
+            <Tooltip formatter={v => [`theta = ${Number(v).toFixed(3)}`, 'Habilidad estimada']} />
+            <Bar dataKey="theta" radius={[0, 6, 6, 0]}>
               {data.map((d, i) => <Cell key={i} fill={d.color} />)}
-              <LabelList dataKey="puntaje" position="right"
+              <LabelList dataKey="theta" position="right"
                 style={{ fontSize: 10, fill: 'var(--text-muted)' }} />
             </Bar>
           </BarChart>
@@ -481,9 +471,9 @@ function NoData() {
 const MENU = [
   { id: 'g1', label: 'Niveles por Vacante', desc: 'Distribucion de niveles por cada vacante' },
   { id: 'g2', label: 'Distribucion Global', desc: 'Donut de niveles en todos los intentos' },
-  { id: 'g3', label: 'puntaje por Evaluacion', desc: 'Promedio de puntaje por evaluacion configurada' },
-  { id: 'g4', label: 'Dispersion puntaje vs SE', desc: 'Precision del CAT (nube de puntos)' },
-  { id: 'g5', label: 'Evolucion Temporal', desc: 'Tendencia de puntaje en el tiempo' },
+  { id: 'g3', label: 'Puntaje por Evaluacion', desc: 'Promedio de Puntaje por evaluacion configurada' },
+  { id: 'g4', label: 'Dispersion Puntaje vs SE', desc: 'Precision del CAT (nube de puntos)' },
+  { id: 'g5', label: 'Evolucion Temporal', desc: 'Tendencia de Puntaje en el tiempo' },
   { id: 'g6', label: 'Duracion por Evaluacion', desc: 'Minimo, promedio y maximo en minutos' },
   { id: 'g7', label: 'Top-15 Candidatos', desc: 'Ranking de candidatos por habilidad estimada' },
 ]
@@ -494,7 +484,7 @@ function PanelGraficas({ intentos, reporte }) {
   const componentes = {
     g1: <G1NivelesPorVacante  reporte={reporte}   />,
     g2: <G2Distribucion        intentos={intentos} />,
-    g3: <G3puntajeEval           intentos={intentos} />,
+    g3: <G3thetaEval           intentos={intentos} />,
     g4: <G4Scatter             intentos={intentos} />,
     g5: <G5Temporal            intentos={intentos} />,
     g6: <G6Duracion            intentos={intentos} />,
@@ -552,7 +542,7 @@ const COLS_INT_TABLA = [
     }},
   { key: 'habilidad_estim', label: 'Puntaje',     width: 85,
     render: v => v != null ? <strong style={{ color: getNivel(v)?.color }}>{Number(v).toFixed(3)}</strong> : '—' },
-  { key: 'habilidad_estim', label: 'Nivel', width: 130, render: v => <NivelBadge puntaje={v} /> },
+  { key: 'habilidad_estim', label: 'Nivel', width: 130, render: v => <NivelBadge theta={v} /> },
   { key: 'error_estandar',  label: 'SE(Puntaje)', width: 80,
     render: v => v != null ? Number(v).toFixed(3) : '—' },
   { key: 'duracion_segundos', label: 'Duración', width: 90,
@@ -585,7 +575,7 @@ export default function Evaluacion() {
     () => intentos.data?.filter(i => i.estado_descripcion === 'Completado') ?? [],
     [intentos.data]
   )
-  const avgpuntaje = completados.length
+  const avgtheta = completados.length
     ? (completados.reduce((s, i) => s + (i.habilidad_estim || 0), 0) / completados.length).toFixed(3)
     : null
 
@@ -606,7 +596,7 @@ export default function Evaluacion() {
           { icon: 'MdQuiz', label:'Evaluaciones activas', value: evals.data?.filter(e=>e.ind_activa).length },
           { icon: 'MdAssignment', label:'Intentos totales',     value: intentos.data?.length },
           { icon: 'MdCheckCircle', label:'Completados',          value: completados.length },
-          { icon: 'MdTrendingUp', label:'Puntaje Promedio',           value: avgpuntaje },
+          { icon: 'MdTrendingUp', label:'Puntaje Promedio',           value: avgtheta },
           { icon: 'MdBarChart', label:'Nivel frecuente',      value: topNivel, small: true },
         ].map(k => (
           <Card key={k.label} style={{ display:'flex', alignItems:'center', gap:10, padding:13 }}>
@@ -653,7 +643,7 @@ export default function Evaluacion() {
 
       {/* Escala */}
       <Card>
-        <h3 style={{ fontSize:'.88rem', marginBottom:10, display:'flex', alignItems:'center', gap:6 }}><MdBarChart size={16}/> Escala puntaje - TRI 3PL</h3>
+        <h3 style={{ fontSize:'.88rem', marginBottom:10, display:'flex', alignItems:'center', gap:6 }}><MdBarChart size={16}/> Escala Puntaje - TRI 3PL</h3>
         <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:8 }}>
           {NIVELES.map(n => (
             <div key={n.label} style={{

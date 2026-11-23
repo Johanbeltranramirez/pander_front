@@ -1,10 +1,3 @@
-// src/pages/ImportacionMasiva/ImportacionMasiva.jsx
-// Importación masiva con:
-//   - Descarga de plantilla Excel por entidad
-//   - Drag & Drop o selección de archivo
-//   - Validación previa (dry_run) con log visual
-//   - Importación definitiva solo si no hay errores
-//   - Log coloreado por fila (OK / ERROR)
 import { useState, useRef, useCallback } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../api/axios'
@@ -14,6 +7,12 @@ import {
   MdTableChart, MdBusiness, MdPerson, MdWork, MdGroups,
   MdAssignment, MdAccountTree, MdBadge, MdRefresh,
 } from 'react-icons/md'
+import {
+  CheckCircle2,
+  XCircle,
+  Search,
+  ClipboardList
+} from 'lucide-react';
 
 // ── Configuración de entidades ────────────────────────────────
 const ENTIDADES = [
@@ -382,11 +381,36 @@ export default function ImportacionMasiva() {
         <div>
           <Card>
             <div style={{ display: 'flex', justifyContent: 'space-between',
-              alignItems: 'center', marginBottom: 14 }}>
-              <h3 style={{ margin: 0, fontSize: '.95rem', fontWeight: 700 }}>
-                {fase === 'listo' ? '✅ Resultado de Importación' :
-                 fase === 'error' ? '❌ Error' :
-                 hayLog          ? '🔍 Log de Validación' : '📋 Log de Validación'}
+              alignItems: 'center', marginBottom: 14 }}> 
+              <h3 style={{
+                margin: 0,
+                fontSize: '.95rem',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                {fase === 'listo' ? (
+                  <>
+                    <CheckCircle2 size={18} color="#16a34a" />
+                    Resultado de Importación
+                  </>
+                ) : fase === 'error' ? (
+                  <>
+                    <XCircle size={18} color="#dc2626" />
+                    Error
+                  </>
+                ) : hayLog ? (
+                  <>
+                    <Search size={18} color="#2563eb" />
+                    Log de Validación
+                  </>
+                ) : (
+                  <>
+                    <ClipboardList size={18} color="#64748b" />
+                    Log de Validación
+                  </>
+                )}
               </h3>
               {resumen && (
                 <div style={{ display: 'flex', gap: 8 }}>

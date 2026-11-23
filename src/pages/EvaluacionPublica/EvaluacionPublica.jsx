@@ -1,6 +1,3 @@
-// src/pages/EvaluacionPublica/EvaluacionPublica.jsx — v4 definitivo
-// Barra de progreso: total = MAX_ITEMS del backend (15 por habilidad)
-// respondidas: acumulativo global — nunca retrocede
 import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { evaluacionService } from '../../services'
@@ -10,7 +7,7 @@ import celebrar from '../../assets/papel-picado.png'
 import { FaExclamationCircle } from "react-icons/fa";
 import { MdClose } from 'react-icons/md';
 
-const MAX_POR_HABILIDAD = 15   // debe coincidir con MotorCAT.MAX_ITEMS
+const MAX_POR_HABILIDAD = 15
 
 function ProgressBar({ respondidas, total }) {
   const pct = total > 0 ? Math.min(100, Math.round((respondidas / total) * 100)) : 0
@@ -53,7 +50,7 @@ export default function EvaluacionPublica() {
   const [resultado,    setResultado]    = useState(null)
   const [loading,      setLoading]      = useState(false)
   const [error,        setError]        = useState(null)
-  const [puntaje,        setpuntaje]        = useState(null)
+  const [theta,        settheta]        = useState(null)
   const tiempoRef = useRef(null)
 
   // Contador GLOBAL acumulativo — nunca retrocede
@@ -103,7 +100,7 @@ export default function EvaluacionPublica() {
         tiempo_seg:   tiempoSeg,
       })
       const d = res.data
-      if (d.puntaje != null) setpuntaje(d.puntaje)
+      if (d.theta != null) settheta(d.theta)
       setSeleccionado(null)
       tiempoRef.current = Date.now()
       // Contador sube siempre — nunca retrocede aunque cambie habilidad
@@ -148,7 +145,7 @@ export default function EvaluacionPublica() {
     </div></div>
   )
   if (estado === 'completado') {
-    const niv = nivel(resultado?.puntaje_final)
+    const niv = nivel(resultado?.theta_final)
     return (
       <div className={styles.page}><div className={styles.card}>
         <img src={celebrar} style={{ fontSize:'3rem', marginBottom:16, width: 50, height:50 }}/>
@@ -156,10 +153,11 @@ export default function EvaluacionPublica() {
         <p style={{ color:'var(--text-muted)', marginBottom:24 }}>
           El equipo de RRHH revisará tus resultados y se comunicará contigo.
         </p>
+        {/*
         {resultado && (
           <div style={{ background:'var(--primary-bg)', borderRadius:12, padding:20, textAlign:'center' }}>
             <div style={{ fontSize:'2.5rem', fontWeight:800, color:niv.color }}>
-              {resultado.puntaje_final != null ? Number(resultado.puntaje_final).toFixed(3) : '—'}
+              {resultado.theta_final != null ? Number(resultado.theta_final).toFixed(3) : '—'}
             </div>
             <div style={{ fontSize:'1.1rem', fontWeight:700, color:niv.color, marginTop:4 }}>{niv.label}</div>
             <div style={{ fontSize:'.78rem', color:'var(--text-muted)', marginTop:4 }}>
@@ -167,6 +165,7 @@ export default function EvaluacionPublica() {
             </div>
           </div>
         )}
+        */}
       </div></div>
     )
   }
@@ -182,11 +181,13 @@ export default function EvaluacionPublica() {
 
       <ProgressBar respondidas={respondidas} total={totalEsperado} />
 
-      {puntaje != null && (
+    {/*
+      {theta != null && (
         <div style={{ fontSize:'.72rem', color:'var(--text-muted)', textAlign:'right', marginBottom:10 }}>
-          Puntaje: {Number(puntaje).toFixed(3)}
+          Puntaje: {Number(theta).toFixed(3)}
         </div>
       )}
+      */}
 
       {error && (
         <div style={{ background:'var(--danger-bg)', color:'var(--danger)', padding:'10px 14px',
