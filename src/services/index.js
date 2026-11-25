@@ -131,3 +131,21 @@ export const evaluacionService = {
   vIntentos:          (cid, p)        => api.get(`/api/evaluacion/v/companias/${cid}/intentos/`, { params: p }),
   vReporte:           (cid, p)        => api.get(`/api/evaluacion/v/companias/${cid}/reporte-postulaciones/`, { params: p }),
 }
+
+// ════════════════════════════════════════════════════════════
+// IMPORTACIÓN — hojas de vida con IA
+// ════════════════════════════════════════════════════════════
+export const importacionService = {
+  // ¿el modelo está listo? formatos, máx. de archivos y tamaño
+  estadoCV: () => api.get('/api/importacion/cv/estado/'),
+
+  // fd lleva el campo repetido "archivos". Hay que pasar el Content-Type multipart porque
+  // el axios del proyecto trae application/json por defecto y rompería el FormData.
+  // El timeout es largo: leer PDFs/imágenes con OCR y pasar el modelo puede tardar.
+  candidatosCV: (cid, fd, config = {}) =>
+    api.post(`/api/importacion/companias/${cid}/candidatos/cv/`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 10 * 60 * 1000,
+      ...config,
+    }),
+}

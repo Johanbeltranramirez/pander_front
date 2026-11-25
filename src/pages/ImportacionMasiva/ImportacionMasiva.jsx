@@ -5,7 +5,7 @@ import { PageHeader, Card, Alert, Spinner, Badge } from '../../components/ui'
 import {
   MdUpload, MdDownload, MdCheckCircle, MdError, MdWarning,
   MdTableChart, MdBusiness, MdPerson, MdWork, MdGroups,
-  MdAssignment, MdAccountTree, MdBadge, MdRefresh,
+  MdAssignment, MdAccountTree, MdBadge, MdRefresh, MdDescription,
 } from 'react-icons/md'
 import {
   CheckCircle2,
@@ -13,6 +13,7 @@ import {
   Search,
   ClipboardList
 } from 'lucide-react';
+import ImportacionCV from './ImportacionCV'
 
 // ── Configuración de entidades ────────────────────────────────
 const ENTIDADES = [
@@ -62,8 +63,9 @@ const ENTIDADES = [
     label:     'Candidatos',
     icon:      MdGroups,
     ruta:      (cid) => `/api/importacion/companias/${cid}/candidatos/`,
-    descripcion: 'Aspirantes a las vacantes.',
-    campos:    ['primer_nombre *', 'primer_apellido *', 'segundo_nombre', 'segundo_apellido', 'tipo_documento', 'numero_documento', 'email', 'telefono'],
+    descripcion: 'Aspirantes a las vacantes. Nombre, apellido y correo electrónico son obligatorios. Se puede cargar desde Excel o desde hojas de vida (IA).',
+    campos:    ['primer_nombre *', 'primer_apellido *', 'email *', 'segundo_nombre', 'segundo_apellido', 'tipo_documento', 'numero_documento', 'telefono'],
+    permiteCV: true,   // además del Excel, acepta hojas de vida (PDF, DOCX, imágenes...) con el modelo de IA
   },
   {
     id:        'postulaciones',
@@ -176,6 +178,7 @@ export default function ImportacionMasiva() {
   const uid      = user?.id
 
   const [entidadId, setEntidadId] = useState('companias')
+  const [modo,      setModo]      = useState('excel')    // excel | cv (solo Candidatos)
   const [archivo,   setArchivo]   = useState(null)
   const [fase,      setFase]      = useState('idle')   // idle | validando | validado | importando | listo | error
   const [log,       setLog]       = useState([])
@@ -189,7 +192,9 @@ export default function ImportacionMasiva() {
     setLog([]); setResumen(null); setMsgError(null)
   }
 
-  const cambiarEntidad = (id) => { setEntidadId(id); resetear() }
+  const cambiarEntidad = (id) => { setEntidadId(id); setModo('excel'); resetear() }
+
+  const usandoCV = entidad.permiteCV && modo === 'cv'
 
   const descargarPlantilla = async () => {
     try {
@@ -253,7 +258,7 @@ export default function ImportacionMasiva() {
     <div>
       <PageHeader
         title="Importación Masiva"
-        subtitle="Carga datos desde Excel · Validación previa · Log de errores por fila"
+        subtitle="Carga datos desde Excel (o desde hojas de vida con IA en Candidatos) · Validación previa · Log de errores"
       />
 
       {/* Selector de entidad */}
@@ -275,6 +280,39 @@ export default function ImportacionMasiva() {
         })}
       </div>
 
+      {/* Candidatos: se puede cargar por la matriz de Excel o por hojas de vida (IA) */}
+      {entidad.permiteCV && (
+        <div role="tablist" aria-label="Origen de los datos" style={{
+          display: 'inline-flex', gap: 4, padding: 4, borderRadius: 10,
+          background: 'var(--border)', marginBottom: 20,
+        }}>
+          {[
+            { id: 'excel', label: 'Matriz de Excel', icon: MdTableChart },
+            { id: 'cv',    label: 'Hojas de vida (IA)', icon: MdDescription },
+          ].map(op => {
+            const Ic = op.icon
+            const activo = modo === op.id
+            return (
+              <button key={op.id} role="tab" aria-selected={activo}
+                onClick={() => { setModo(op.id); resetear() }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 7, padding: '7px 16px',
+                  borderRadius: 8, border: 'none', cursor: 'pointer',
+                  fontFamily: 'var(--font)', fontSize: '.82rem', fontWeight: 600,
+                  background: activo ? '#fff' : 'transparent',
+                  color: activo ? 'var(--primary)' : 'var(--text-muted)',
+                  boxShadow: activo ? '0 1px 3px rgba(0,0,0,.12)' : 'none',
+                }}>
+                <Ic size={15}/> {op.label}
+              </button>
+            )
+          })}
+        </div>
+      )}
+
+      {usandoCV && <ImportacionCV cid={cid} uid={uid}/>}
+
+      {!usandoCV && (
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, alignItems: 'start' }}>
 
         {/* Panel izquierdo: carga y acciones */}
@@ -459,6 +497,7 @@ export default function ImportacionMasiva() {
           </Card>
         </div>
       </div>
+      )}
     </div>
   )
 }
