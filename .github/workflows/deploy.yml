@@ -1,0 +1,68 @@
+name: Desplegar frontend
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  IMAGE: ghcr.io/johanbeltranramirez/pander-front   # GHCR exige minúsculas
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm   # runner ARM nativo (gratis en repos públicos)
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/arm64
+          push: true
+          build-args: |
+            VITE_API_URL=
+          tags: |
+            ${{ env.IMAGE }}:${{ github.sha }}
+            ${{ env.IMAGE }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Poner el SHA del commit como tag de la imagen
+        run: sed -i "s|pander-front:latest|pander-front:${GITHUB_SHA}|g" kubernetes/05-frontend.yaml
+
+      - name: Preparar SSH
+        run: |
+          install -m 700 -d ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Copiar manifiesto y aplicar
+        run: |
+          ssh -i ~/.ssh/id_deploy ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "mkdir -p ~/pander/kubernetes-front"
+          scp -i ~/.ssh/id_deploy kubernetes/05-frontend.yaml ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:~/pander/kubernetes-front/
+          ssh -i ~/.ssh/id_deploy ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          K="sudo k3s kubectl"
+          # El PVC "pander-media" lo crea el despliegue del backend; hay que desplegar el backend primero
+          $K -n pander get pvc pander-media >/dev/null
+          $K apply -f ~/pander/kubernetes-front/05-frontend.yaml
+          $K -n pander rollout status deployment/frontend --timeout=300s
+          REMOTE

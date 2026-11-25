@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext'
 import { candidatosService } from '../../services'
 import { MdDescription, MdAttachFile, MdUpload, MdVisibility } from 'react-icons/md'
 import CrudPage from '../../components/ui/CrudPage'
+import { API_BASE_URL } from '../../api/axios'
 import { Input, Select, Modal, Button, Alert, Spinner } from '../../components/ui'
 
 const COLS = [
@@ -136,7 +137,7 @@ function ModalCV({ open, onClose, compania, candidatoId, candidatoNombre }) {
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <a
-                    href={`http://localhost:8000/media/${anx.ruta_almacenamiento}`}
+                    href={`${API_BASE_URL}/media/${anx.ruta_almacenamiento}`}
                     target="_blank" rel="noreferrer"
                     style={{
                       padding: '6px 12px', background: 'var(--info-bg)', color: 'var(--info)',
